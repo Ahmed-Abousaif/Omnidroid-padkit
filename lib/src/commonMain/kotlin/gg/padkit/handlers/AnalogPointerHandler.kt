@@ -24,15 +24,15 @@ import gg.padkit.inputstate.setDigitalKeyIfPressed
 import gg.padkit.utils.Constants
 import gg.padkit.utils.GeometryUtils
 import gg.padkit.utils.coerceIn
-import kotlinx.datetime.Clock
-import kotlinx.datetime.Instant
+import kotlin.time.TimeMark
+import kotlin.time.TimeSource
 
 internal class AnalogPointerHandler(
     private val directionId: Id.ContinuousDirection,
     private val analogPressId: Id.Key?,
 ) : PointerHandler {
     data class Data(
-        var lastDownEvent: Instant = Instant.DISTANT_PAST,
+        var lastDownEvent: TimeMark = TimeSource.Monotonic.markNow() - Constants.DOUBLE_TAP_INTERVAL,
         var pressed: Boolean = false,
         var startPosition: Offset = Offset.Unspecified,
     )
@@ -73,9 +73,9 @@ internal class AnalogPointerHandler(
             else -> {
                 val firstPointer = pointers.first()
                 val previousTime = analogData.lastDownEvent
-                val currentTime = Clock.System.now()
+                val currentTime = TimeSource.Monotonic.markNow()
                 analogData.lastDownEvent = currentTime
-                analogData.pressed = currentTime - previousTime < Constants.DOUBLE_TAP_INTERVAL
+                analogData.pressed = previousTime.elapsedNow() < Constants.DOUBLE_TAP_INTERVAL
                 analogData.startPosition = firstPointer.position
 
                 Result(updateInputState(inputState, Offset.Zero, analogData.pressed), setOf(firstPointer.pointerId))
