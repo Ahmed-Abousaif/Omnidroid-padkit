@@ -1,3 +1,5 @@
+@file:OptIn(org.jetbrains.kotlin.gradle.ExperimentalWasmDsl::class)
+
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.android.library)
@@ -10,8 +12,17 @@ kotlin {
 
     jvm()
 
+    wasmJs {
+        outputModuleName.set("padkit-sample")
+        browser {
+            commonWebpackConfig {
+                outputFileName = "padkit-sample.js"
+            }
+        }
+        binaries.executable()
+    }
+
     listOf(
-        iosX64(),
         iosArm64(),
         iosSimulatorArm64(),
     ).forEach { iosTarget ->

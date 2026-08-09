@@ -1,3 +1,5 @@
+@file:OptIn(org.jetbrains.kotlin.gradle.ExperimentalWasmDsl::class)
+
 import com.vanniktech.maven.publish.SonatypeHost
 
 plugins {
@@ -17,8 +19,11 @@ kotlin {
 
     jvm("desktop")
 
+    wasmJs {
+        browser()
+    }
+
     listOf(
-        iosX64(),
         iosArm64(),
         iosSimulatorArm64(),
     ).forEach { iosTarget ->
