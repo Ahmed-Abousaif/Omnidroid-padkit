@@ -1,4 +1,10 @@
-# PadKit
+# Omnidroid-padkit
+
+Omnidroid's fork of [Swordfish90/PadKit](https://github.com/Swordfish90/PadKit), maintained here for enhancements to Omnidroid's virtual gamepads and touch controls.
+
+The documentation below describes the upstream API and published artifact.
+
+## PadKit
 
 PadKit is a Compose Multiplatform library that allows developers to create custom virtual gamepads for games and applications.
 This project is a continuation of the original [JamPadCompose](https://github.com/piepacker/JamPadCompose) by Jam.gg.
