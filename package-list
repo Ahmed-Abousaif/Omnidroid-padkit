@@ -1,0 +1,14 @@
+$dokka.format:html-v1
+$dokka.linkExtension:html
+
+module:lib
+gg.padkit
+gg.padkit.anchors
+gg.padkit.config
+gg.padkit.controls
+gg.padkit.ids
+gg.padkit.inputevents
+gg.padkit.inputstate
+gg.padkit.layouts.radial
+gg.padkit.layouts.radial.secondarydials
+gg.padkit.ui
