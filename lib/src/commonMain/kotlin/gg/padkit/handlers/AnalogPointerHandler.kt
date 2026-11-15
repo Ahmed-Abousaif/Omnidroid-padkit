@@ -21,76 +21,12 @@ import androidx.compose.ui.geometry.Offset
 import gg.padkit.ids.Id
 import gg.padkit.inputstate.InputState
 import gg.padkit.inputstate.setDigitalKeyIfPressed
-import gg.padkit.utils.Constants
-import gg.padkit.utils.GeometryUtils
-import gg.padkit.utils.coerceIn
-import kotlin.time.TimeMark
-import kotlin.time.TimeSource
 
 internal class AnalogPointerHandler(
     private val directionId: Id.ContinuousDirection,
     private val analogPressId: Id.Key?,
-) : PointerHandler {
-    data class Data(
-        var lastDownEvent: TimeMark = TimeSource.Monotonic.markNow() - Constants.DOUBLE_TAP_INTERVAL,
-        var pressed: Boolean = false,
-        var startPosition: Offset = Offset.Unspecified,
-    )
-
-    override fun reset(data: Any?) {
-        val analogData = data as Data
-        analogData.lastDownEvent = TimeSource.Monotonic.markNow() - Constants.DOUBLE_TAP_INTERVAL
-        analogData.pressed = false
-        analogData.startPosition = Offset.Unspecified
-    }
-
-    override fun handle(
-        pointers: List<Pointer>,
-        inputState: InputState,
-        trackedIds: Set<Long>,
-        data: Any?,
-    ): Result {
-        val analogData = data as Data
-
-        val currentlyDraggedPointer =
-            pointers
-                .firstOrNull { trackedIds.contains(it.pointerId) }
-
-        return when {
-            pointers.isEmpty() -> {
-                analogData.pressed = false
-                analogData.startPosition = Offset.Unspecified
-                Result(
-                    updateInputState(inputState, Offset.Unspecified, analogData.pressed),
-                    emptySet(),
-                )
-            }
-            analogData.startPosition != Offset.Unspecified && currentlyDraggedPointer != null -> {
-                val deltaPosition =
-                    Offset(
-                        currentlyDraggedPointer.position.x - analogData.startPosition.x,
-                        analogData.startPosition.y - currentlyDraggedPointer.position.y,
-                    )
-                val offsetValue = deltaPosition.coerceIn(Offset(-1f, -1f), Offset(1f, 1f))
-                Result(
-                    updateInputState(inputState, GeometryUtils.mapCircleToSquare(offsetValue), analogData.pressed),
-                    trackedIds,
-                )
-            }
-            else -> {
-                val firstPointer = pointers.first()
-                val previousTime = analogData.lastDownEvent
-                val currentTime = TimeSource.Monotonic.markNow()
-                analogData.lastDownEvent = currentTime
-                analogData.pressed = previousTime.elapsedNow() < Constants.DOUBLE_TAP_INTERVAL
-                analogData.startPosition = firstPointer.position
-
-                Result(updateInputState(inputState, Offset.Zero, analogData.pressed), setOf(firstPointer.pointerId))
-            }
-        }
-    }
-
-    private fun updateInputState(
+) : AnalogGestureHandler() {
+    override fun updateInputState(
         inputState: InputState,
         direction: Offset,
         pressed: Boolean,

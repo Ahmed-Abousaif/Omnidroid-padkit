@@ -18,102 +18,100 @@
 package gg.padkit.haptics
 
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.isSpecified
+import gg.padkit.config.DirectionHapticFeedback
+import gg.padkit.config.HapticFeedbackSettings
 import gg.padkit.config.HapticFeedbackType
+import gg.padkit.ids.Id
 import gg.padkit.inputstate.InputState
+import kotlin.math.abs
 
-internal class InputHapticGenerator(
-    private val generator: HapticGenerator,
-    private val hapticFeedbackType: HapticFeedbackType,
-    private var previousInputState: InputState,
-) {
-    fun onInputStateChanged(current: InputState) {
-        if (hapticFeedbackType == HapticFeedbackType.NONE) {
-            return
-        }
-
+/** Tracks transitions even while muted or excluded, so preference changes cannot replay a press. */
+internal class InputHapticGenerator(private var previousInputState: InputState) {
+    fun onInputStateChanged(
+        current: InputState,
+        feedback: HapticFeedback?,
+        type: HapticFeedbackType,
+        settings: HapticFeedbackSettings,
+    ) {
         val previous = previousInputState
-
-        val requestedEffect =
-            keyEffect(previous, current)
-                ?: discreteDirectionEffect(previous, current)
-                ?: continuousDirectionEffect(previous, current)
-
-        if (requestedEffect != null && shouldPlayEffect(requestedEffect)) {
-            generator.generate(requestedEffect)
-        }
-
         previousInputState = current
-    }
+        if (feedback == null || type == HapticFeedbackType.NONE || settings.intensity == 0f) return
 
-    private fun shouldPlayEffect(effect: HapticEffect): Boolean {
-        return when {
-            effect == HapticEffect.PRESS -> true
-            effect == HapticEffect.RELEASE && hapticFeedbackType == HapticFeedbackType.PRESS_RELEASE -> true
-            else -> false
-        }
-    }
-
-    private fun keyEffect(
-        previous: InputState,
-        current: InputState,
-    ): HapticEffect? {
-        if (previous.digitalKeys == current.digitalKeys) {
-            return null
-        }
-
-        val previouslyPressedInputs = previous.digitalKeys.size
-        val currentlyPressedInputs = current.digitalKeys.size
-
-        return if (currentlyPressedInputs >= previouslyPressedInputs) {
-            HapticEffect.PRESS
+        val effects = mutableListOf<HapticEffect>()
+        val keyEffects =
+            (previous.digitalKeys + current.digitalKeys)
+                .filter { Id.Key(it) !in settings.excludedControlIds }
+                .mapNotNull { id ->
+                    transition(id in previous.digitalKeys, id in current.digitalKeys)
+                }
+        if (settings.coalesceEffects) {
+            if (keyEffects.isNotEmpty()) {
+                effects +=
+                    if (current.digitalKeys.count { Id.Key(it) !in settings.excludedControlIds } >=
+                        previous.digitalKeys.count { Id.Key(it) !in settings.excludedControlIds }
+                    ) {
+                        HapticEffect.PRESS
+                    } else {
+                        HapticEffect.RELEASE
+                    }
+            }
         } else {
-            HapticEffect.RELEASE
+            effects += keyEffects
         }
+
+        val discreteEffects =
+            (previous.discreteDirections.keys + current.discreteDirections.keys)
+                .filter { Id.DiscreteDirection(it) !in settings.excludedControlIds }
+                .mapNotNull { id ->
+                    val before = previous.discreteDirections[id] ?: Offset.Unspecified
+                    val after = current.discreteDirections[id] ?: Offset.Unspecified
+                    if (settings.discreteDirections == DirectionHapticFeedback.ACTIVATION) {
+                        transition(before.isActive(), after.isActive())
+                    } else {
+                        val oldCount = before.axisCount()
+                        val newCount = after.axisCount()
+                        when {
+                            before == after || oldCount == 0 && newCount == 0 -> null
+                            newCount >= oldCount -> HapticEffect.PRESS
+                            else -> HapticEffect.RELEASE
+                        }
+                    }
+                }
+        effects += discreteEffects
+
+        if (settings.continuousDirections) {
+            effects +=
+                (previous.continuousDirections.keys + current.continuousDirections.keys)
+                    .filter { Id.ContinuousDirection(it) !in settings.excludedControlIds }
+                    .mapNotNull { id ->
+                        transition(
+                            previous.continuousDirections[id]?.isFiniteDirection() == true,
+                            current.continuousDirections[id]?.isFiniteDirection() == true,
+                        )
+                    }
+        }
+
+        val permitted = effects.filter { it == HapticEffect.PRESS || type == HapticFeedbackType.PRESS_RELEASE }
+        // Coalescing uses category priority: buttons, discrete controls, then analogs.
+        // A disallowed release must not hide a simultaneous permitted press.
+        (if (settings.coalesceEffects) permitted.take(1) else permitted)
+            .forEach { feedback.generate(it, settings.intensity) }
     }
 
-    private fun continuousDirectionEffect(
-        previous: InputState,
-        current: InputState,
-    ): HapticEffect? {
-        val previouslyActiveAnalogs =
-            previous.continuousDirections
-                .values.count { it != Offset.Unspecified }
-
-        val currentlyActiveAnalogs =
-            current.continuousDirections
-                .values.count { it != Offset.Unspecified }
-
-        return when {
-            currentlyActiveAnalogs > previouslyActiveAnalogs -> HapticEffect.PRESS
-            currentlyActiveAnalogs == previouslyActiveAnalogs -> null
-            else -> HapticEffect.RELEASE
-        }
-    }
-
-    private fun discreteDirectionEffect(
-        previous: InputState,
-        current: InputState,
-    ): HapticEffect? {
-        if (previous.discreteDirections == current.discreteDirections) {
-            return null
+    private fun transition(
+        before: Boolean,
+        after: Boolean,
+    ): HapticEffect? =
+        when {
+            !before && after -> HapticEffect.PRESS
+            before && !after -> HapticEffect.RELEASE
+            else -> null
         }
 
-        val previouslyPressed =
-            previous.discreteDirections.values
-                .asSequence()
-                .flatMap { sequenceOf(it.x > 0.5, it.x < -0.5, it.y > 0.5, it.y < -0.5) }
-                .count { it }
+    private fun Offset.isFiniteDirection() = isSpecified && x.isFinite() && y.isFinite()
 
-        val currentlyPressed =
-            current.discreteDirections.values
-                .asSequence()
-                .flatMap { sequenceOf(it.x > 0.5, it.x < -0.5, it.y > 0.5, it.y < -0.5) }
-                .count { it }
+    private fun Offset.isActive() = isFiniteDirection() && (abs(x) > 0.01f || abs(y) > 0.01f)
 
-        return if (currentlyPressed >= previouslyPressed) {
-            HapticEffect.PRESS
-        } else {
-            HapticEffect.RELEASE
-        }
-    }
+    private fun Offset.axisCount(): Int = if (!isFiniteDirection()) 0 else (if (abs(x) > 0.5f) 1 else 0) + (if (abs(y) > 0.5f) 1 else 0)
 }

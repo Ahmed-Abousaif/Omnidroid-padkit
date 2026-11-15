@@ -19,11 +19,14 @@ package gg.padkit.haptics
 
 import androidx.compose.runtime.Composable
 
-private object BrowserHapticGenerator : HapticGenerator {
-    override fun generate(type: HapticEffect) {
+private object BrowserHapticGenerator : HapticFeedback {
+    override fun generate(
+        type: HapticEffect,
+        intensity: Float,
+    ) {
         // WebView vibration support varies by browser and host application.
     }
 }
 
 @Composable
-internal actual fun rememberHapticGenerator(): HapticGenerator = BrowserHapticGenerator
+actual fun rememberHapticFeedback(): HapticFeedback = BrowserHapticGenerator

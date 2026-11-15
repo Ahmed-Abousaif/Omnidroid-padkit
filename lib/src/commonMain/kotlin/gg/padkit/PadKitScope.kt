@@ -19,7 +19,9 @@ package gg.padkit
 
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.State
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import gg.padkit.handlers.Pointer
@@ -46,7 +48,7 @@ class PadKitScope {
     internal val inputState: State<InputState> = currentInputState
 
     private val handlers = mutableMapOf<PointerHandler, HandlerState>()
-    private var simulatedControlIds: Set<Id> = emptySet()
+    private var simulatedControlIds: Set<Id> by mutableStateOf(emptySet())
     private var simulatedInputState = InputState()
     private var inputStateListener: ((InputState) -> Unit)? = null
     private val pendingStates = ArrayDeque<InputState>()
@@ -75,6 +77,18 @@ class PadKitScope {
         rect: Rect,
     ) {
         handlers[pointerHandler]?.rect = rect
+    }
+
+    internal fun isSimulated(id: Id): Boolean = id in simulatedControlIds
+
+    /** Recompute a held control after changing its policy, preserving pointer capture. */
+    internal fun updateHandlerInputState(
+        pointerHandler: PointerHandler,
+        state: InputState,
+    ) {
+        val handler = handlers[pointerHandler] ?: return
+        handler.inputState = state
+        publishInputState()
     }
 
     private fun getAllHandlers(): Collection<HandlerState> {

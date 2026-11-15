@@ -31,10 +31,12 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
+import gg.padkit.config.HapticFeedbackSettings
 import gg.padkit.config.HapticFeedbackType
 import gg.padkit.handlers.Pointer
+import gg.padkit.haptics.HapticFeedback
 import gg.padkit.haptics.InputHapticGenerator
-import gg.padkit.haptics.rememberHapticGenerator
+import gg.padkit.haptics.rememberHapticFeedback
 import gg.padkit.ids.Id
 import gg.padkit.inputevents.InputEvent
 import gg.padkit.inputevents.InputEventsGenerator
@@ -67,6 +69,8 @@ import gg.padkit.inputstate.InputState
  * @param simulatedControlIds A set of [Id]s that should be controlled by the [simulatedState]
  * instead of user input. This is useful for testing or creating demos.
  * @param simulatedState The [InputState] to use for the controls specified in [simulatedControlIds].
+ * @param hapticFeedbackSettings Feedback strength, transition policy, and excluded control IDs.
+ * @param hapticFeedback Optional output adapter. Null selects the platform implementation.
  * @param content A lambda that receives a [PadKitScope] where you can define the layout of the
  * gamepad by adding control composables.
  */
@@ -78,27 +82,38 @@ fun PadKit(
     hapticFeedbackType: HapticFeedbackType = HapticFeedbackType.PRESS,
     simulatedControlIds: State<Set<Id>> = mutableStateOf(emptySet()),
     simulatedState: State<InputState> = mutableStateOf(InputState()),
+    hapticFeedbackSettings: HapticFeedbackSettings = HapticFeedbackSettings(),
+    hapticFeedback: HapticFeedback? = null,
     content: @Composable PadKitScope.() -> Unit,
 ) {
     val scope = remember { PadKitScope() }
     val rootPosition = remember { mutableStateOf(Offset.Zero) }
 
     val inputEventsGenerator = remember { InputEventsGenerator() }
-    val hapticGenerator = if (hapticFeedbackType == HapticFeedbackType.NONE) null else rememberHapticGenerator()
-    val inputHapticGenerator =
-        remember(hapticGenerator, hapticFeedbackType) {
-            hapticGenerator?.let { InputHapticGenerator(it, hapticFeedbackType, scope.inputState.value) }
+    val hapticGenerator =
+        if (hapticFeedbackType == HapticFeedbackType.NONE || hapticFeedbackSettings.intensity == 0f) {
+            null
+        } else {
+            hapticFeedback ?: rememberHapticFeedback()
         }
+    val inputHapticGenerator = remember { InputHapticGenerator(scope.inputState.value) }
     val currentStateCallback = rememberUpdatedState(onInputStateUpdated)
     val currentEventsCallback = rememberUpdatedState(onInputEvents)
-    val currentHapticGenerator = rememberUpdatedState(inputHapticGenerator)
+    val currentHapticGenerator = rememberUpdatedState(hapticGenerator)
+    val currentHapticType = rememberUpdatedState(hapticFeedbackType)
+    val currentHapticSettings = rememberUpdatedState(hapticFeedbackSettings)
 
     DisposableEffect(scope) {
         scope.setInputStateListener { state ->
             val events = inputEventsGenerator.onInputStateChanged(state)
             currentStateCallback.value?.invoke(state)
             currentEventsCallback.value?.invoke(events)
-            currentHapticGenerator.value?.onInputStateChanged(state)
+            inputHapticGenerator.onInputStateChanged(
+                state,
+                currentHapticGenerator.value,
+                currentHapticType.value,
+                currentHapticSettings.value,
+            )
         }
         onDispose {
             scope.reset()

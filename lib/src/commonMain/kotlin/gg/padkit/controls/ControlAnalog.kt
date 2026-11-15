@@ -33,6 +33,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import gg.padkit.PadKitScope
+import gg.padkit.handlers.AnalogGestureHandler
 import gg.padkit.handlers.AnalogPointerHandler
 import gg.padkit.ids.Id
 import gg.padkit.ui.DefaultButtonForeground
@@ -67,33 +68,35 @@ fun PadKitScope.ControlAnalog(
 ) {
     val handler = remember(id, analogPressId) { AnalogPointerHandler(id, analogPressId) }
     DisposableEffect(handler) {
-        registerHandler(handler, AnalogPointerHandler.Data())
+        registerHandler(handler, AnalogGestureHandler.Data())
         onDispose {
             unregisterHandler(handler)
         }
     }
 
-    BoxWithConstraints(
-        modifier =
-            modifier
-                .aspectRatio(1f)
-                .onGloballyPositioned { updateHandlerPosition(handler, it.boundsInRoot()) },
-        contentAlignment = Alignment.Center,
-    ) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            background()
-        }
+    val positionState = remember(id) { derivedStateOf { inputState.value.getContinuousDirection(id) } }
+    val pressedState = remember(id) { derivedStateOf { inputState.value.getContinuousDirection(id) != Offset.Unspecified } }
+    AnalogControlLayout(
+        modifier = modifier.onGloballyPositioned { updateHandlerPosition(handler, it.boundsInRoot()) },
+        foregroundSize = foregroundSize,
+        positionState = positionState,
+        pressedState = pressedState,
+        background = background,
+        foreground = foreground,
+    )
+}
 
-        val positionState =
-            remember(id) {
-                derivedStateOf { inputState.value.getContinuousDirection(id) }
-            }
-
-        val pressedState =
-            remember(id) {
-                derivedStateOf { inputState.value.getContinuousDirection(id) != Offset.Unspecified }
-            }
-
+@Composable
+internal fun AnalogControlLayout(
+    modifier: Modifier,
+    foregroundSize: Float,
+    positionState: State<Offset>,
+    pressedState: State<Boolean>,
+    background: @Composable () -> Unit,
+    foreground: @Composable (State<Boolean>) -> Unit,
+) {
+    BoxWithConstraints(modifier = modifier.aspectRatio(1f), contentAlignment = Alignment.Center) {
+        Box(modifier = Modifier.fillMaxSize()) { background() }
         val position = positionState.value
         val safePosition =
             GeometryUtils.mapSquareToCircle(
