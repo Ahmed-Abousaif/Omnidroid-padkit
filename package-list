@@ -6,6 +6,7 @@ gg.padkit
 gg.padkit.anchors
 gg.padkit.config
 gg.padkit.controls
+gg.padkit.haptics
 gg.padkit.ids
 gg.padkit.inputevents
 gg.padkit.inputstate
