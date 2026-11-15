@@ -70,6 +70,14 @@ class InputHapticGeneratorTest {
     }
 
     @Test
+    fun replacingButtonsPreservesInputEventPressThenReleaseOrder() {
+        update(InputState().setDigitalKey(Id.Key(1), true))
+        effects.clear()
+        update(InputState().setDigitalKey(Id.Key(2), true))
+        assertEquals(listOf(HapticEffect.PRESS to 0.5f, HapticEffect.RELEASE to 0.5f), effects)
+    }
+
+    @Test
     fun modeAndZeroMuteStillTrackStateWithoutReplayingPresses() {
         val held = InputState().setDigitalKey(Id.Key(1), true)
         update(held, type = HapticFeedbackType.NONE)

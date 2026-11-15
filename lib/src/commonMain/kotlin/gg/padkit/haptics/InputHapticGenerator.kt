@@ -39,12 +39,14 @@ internal class InputHapticGenerator(private var previousInputState: InputState) 
         if (feedback == null || type == HapticFeedbackType.NONE || settings.intensity == 0f) return
 
         val effects = mutableListOf<HapticEffect>()
+        // Match InputEventsGenerator: new presses precede releases in the same update.
         val keyEffects =
-            (previous.digitalKeys + current.digitalKeys)
+            (current.digitalKeys - previous.digitalKeys)
                 .filter { Id.Key(it) !in settings.excludedControlIds }
-                .mapNotNull { id ->
-                    transition(id in previous.digitalKeys, id in current.digitalKeys)
-                }
+                .map { HapticEffect.PRESS } +
+                (previous.digitalKeys - current.digitalKeys)
+                    .filter { Id.Key(it) !in settings.excludedControlIds }
+                    .map { HapticEffect.RELEASE }
         if (settings.coalesceEffects) {
             if (keyEffects.isNotEmpty()) {
                 effects +=
