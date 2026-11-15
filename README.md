@@ -82,6 +82,18 @@ fun SampleGamePad() {
 }
 ```
 
+### Input lifecycle
+
+Each control owns its touch contribution. Removing or remapping a held control releases its old input immediately while preserving other held controls, including controls sharing the same key. Cancelling pointer input clears touch capture and analog gesture state. Removing the entire `PadKit` composition also releases simulated input.
+
+Simulated control IDs override the current touch state for those IDs. Changing the ID set takes effect even when the simulated state is unchanged. Removing an override restores the current touch contribution, including a finger that is still held.
+
+Input callbacks are delivered synchronously in transition order, including releases during disposal. Keep callbacks short. Reentrant state changes are queued after the transition currently being delivered.
+
+Android haptics submit effects directly to the platform vibrator service and own no background thread or coroutine scope. `HapticFeedbackType.NONE` does not initialize a platform haptics generator.
+
+Engine regression tests live in `lib/src/commonTest/kotlin`. Omnidroid's source wrapper runs these together with Android Compose lifecycle tests under Robolectric.
+
 ### License
 
 ```

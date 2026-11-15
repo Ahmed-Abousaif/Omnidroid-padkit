@@ -37,6 +37,13 @@ internal class AnalogPointerHandler(
         var startPosition: Offset = Offset.Unspecified,
     )
 
+    override fun reset(data: Any?) {
+        val analogData = data as Data
+        analogData.lastDownEvent = TimeSource.Monotonic.markNow() - Constants.DOUBLE_TAP_INTERVAL
+        analogData.pressed = false
+        analogData.startPosition = Offset.Unspecified
+    }
+
     override fun handle(
         pointers: List<Pointer>,
         inputState: InputState,

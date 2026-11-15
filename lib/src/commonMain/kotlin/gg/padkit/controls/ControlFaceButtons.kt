@@ -170,7 +170,7 @@ private fun ButtonForeground(
     content: @Composable (Id.Key, State<Boolean>) -> Unit,
 ) {
     val pressed =
-        remember {
+        remember(keyId, inputState) {
             derivedStateOf { inputState.value.getDigitalKey(keyId) }
         }
     content(keyId, pressed)
@@ -183,7 +183,7 @@ private fun CompositeForeground(
     content: @Composable (State<Boolean>) -> Unit,
 ) {
     val pressed =
-        remember {
+        remember(keys, inputState) {
             derivedStateOf { keys.all { inputState.value.getDigitalKey(it) } }
         }
     content(pressed)

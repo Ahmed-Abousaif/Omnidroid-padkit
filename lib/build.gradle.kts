@@ -42,6 +42,9 @@ kotlin {
 
             implementation(libs.kotlinx.collections.immutable)
         }
+        commonTest.dependencies {
+            implementation(kotlin("test"))
+        }
     }
 }
 

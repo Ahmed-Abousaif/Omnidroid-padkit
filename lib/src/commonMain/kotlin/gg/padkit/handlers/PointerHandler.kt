@@ -20,6 +20,8 @@ package gg.padkit.handlers
 import gg.padkit.inputstate.InputState
 
 internal interface PointerHandler {
+    fun reset(data: Any?) {}
+
     fun handle(
         pointers: List<Pointer>,
         inputState: InputState,

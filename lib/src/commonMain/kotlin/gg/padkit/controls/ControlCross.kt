@@ -69,7 +69,7 @@ fun PadKitScope.ControlCross(
         }
 
     val positionState =
-        remember {
+        remember(id) {
             derivedStateOf { inputState.value.getDiscreteDirection(id) }
         }
 

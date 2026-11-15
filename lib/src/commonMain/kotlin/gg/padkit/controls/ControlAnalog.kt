@@ -49,7 +49,7 @@ import gg.padkit.utils.ifUnspecified
  * @param modifier The modifier to be applied to the control.
  * @param id The [Id.ContinuousDirection] to associate with this control.
  * @param analogPressId The [Id.Key] to associate with the press state of the analog stick.
- * If this is not null, the digital key with this id will be set to `true` when the analog stick is being touched.
+ * A second touch within 200 ms holds this key until that touch is released.
  * @param foregroundSize The size of the foreground relative to the background.
  * @param background The composable to use as the background of the control.
  * @param foreground The composable to use as the foreground of the control. It receives a [State] that is `true` when the control is being touched.
@@ -65,7 +65,7 @@ fun PadKitScope.ControlAnalog(
         DefaultButtonForeground(pressedState = it, scale = 1f)
     },
 ) {
-    val handler = remember { AnalogPointerHandler(id, analogPressId) }
+    val handler = remember(id, analogPressId) { AnalogPointerHandler(id, analogPressId) }
     DisposableEffect(handler) {
         registerHandler(handler, AnalogPointerHandler.Data())
         onDispose {
@@ -85,12 +85,12 @@ fun PadKitScope.ControlAnalog(
         }
 
         val positionState =
-            remember {
+            remember(id) {
                 derivedStateOf { inputState.value.getContinuousDirection(id) }
             }
 
         val pressedState =
-            remember {
+            remember(id) {
                 derivedStateOf { inputState.value.getContinuousDirection(id) != Offset.Unspecified }
             }
 

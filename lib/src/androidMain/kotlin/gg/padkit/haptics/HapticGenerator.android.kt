@@ -25,18 +25,11 @@ import android.os.VibratorManager
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.newSingleThreadContext
 
-@OptIn(ExperimentalCoroutinesApi::class, DelicateCoroutinesApi::class)
 internal class AndroidHapticGenerator(applicationContext: Context) : HapticGenerator {
     private val vibrator = buildVibrator(applicationContext)
     private val strongEffect = buildStrongVibrationEffect()
     private val weakEffect = buildWeakVibrationEffect()
-    private val scope = CoroutineScope(newSingleThreadContext("Haptics"))
 
     override fun generate(type: HapticEffect) {
         val effect =
@@ -46,9 +39,7 @@ internal class AndroidHapticGenerator(applicationContext: Context) : HapticGener
             }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && effect != null) {
-            scope.launch {
-                vibrator.vibrate(effect)
-            }
+            vibrator.vibrate(effect)
         }
     }
 
