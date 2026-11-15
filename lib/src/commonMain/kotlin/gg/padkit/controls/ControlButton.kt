@@ -52,11 +52,11 @@ fun PadKitScope.ControlButton(
     foreground: @Composable (State<Boolean>) -> Unit = { DefaultButtonForeground(pressedState = it) },
 ) {
     val pressedState =
-        remember {
+        remember(id) {
             derivedStateOf { inputState.value.getDigitalKey(id) }
         }
 
-    val handler = remember { ButtonPointerHandler(id) }
+    val handler = remember(id) { ButtonPointerHandler(id) }
     DisposableEffect(handler) {
         registerHandler(handler)
         onDispose {

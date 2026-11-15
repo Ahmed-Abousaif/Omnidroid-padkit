@@ -18,6 +18,7 @@
 package gg.padkit
 
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
@@ -25,6 +26,7 @@ import gg.padkit.handlers.Pointer
 import gg.padkit.handlers.PointerHandler
 import gg.padkit.ids.Id
 import gg.padkit.inputstate.InputState
+import gg.padkit.inputstate.merge
 import gg.padkit.utils.relativeToCenter
 
 /**
@@ -37,11 +39,23 @@ class PadKitScope {
         var trackedIds: Set<Long>,
         var rect: Rect = Rect.Zero,
         val data: Any? = null,
+        var inputState: InputState = InputState(),
     )
 
-    internal val inputState = mutableStateOf(InputState())
+    private val currentInputState = mutableStateOf(InputState())
+    internal val inputState: State<InputState> = currentInputState
 
     private val handlers = mutableMapOf<PointerHandler, HandlerState>()
+    private var simulatedControlIds: Set<Id> = emptySet()
+    private var simulatedInputState = InputState()
+    private var inputStateListener: ((InputState) -> Unit)? = null
+    private val pendingStates = ArrayDeque<InputState>()
+    private var dispatching = false
+
+    internal fun setInputStateListener(listener: ((InputState) -> Unit)?) {
+        inputStateListener = listener
+        if (listener != null) dispatchState(inputState.value)
+    }
 
     internal fun registerHandler(
         pointerHandler: PointerHandler,
@@ -51,7 +65,9 @@ class PadKitScope {
     }
 
     internal fun unregisterHandler(pointerHandler: PointerHandler) {
-        handlers.remove(pointerHandler)
+        val removed = handlers.remove(pointerHandler) ?: return
+        pointerHandler.reset(removed.data)
+        publishInputState()
     }
 
     internal fun updateHandlerPosition(
@@ -96,8 +112,8 @@ class PadKitScope {
                     }
                 }
 
-        return getAllHandlers()
-            .fold(InputState()) { state, handler ->
+        getAllHandlers()
+            .forEach { handler ->
                 val pointerHandler = handler.pointerHandler
                 val pointers =
                     handlersAssociations.getOrElse(pointerHandler) { emptyList() }
@@ -119,27 +135,75 @@ class PadKitScope {
                 val (updatedState, updatedTrackedIndices) =
                     pointerHandler.handle(
                         relativePointers,
-                        state,
+                        InputState(),
                         handler.trackedIds,
                         handler.data,
                     )
 
                 handler.trackedIds = updatedTrackedIndices
-                updatedState
+                handler.inputState = updatedState
             }
+
+        publishInputState()
+        return inputState.value
     }
 
-    internal fun handleSimulatedInputEvents(
+    internal fun updateSimulatedInput(
         simulatedControlIds: Set<Id>,
-        inputState: InputState,
         simulatedInputState: InputState,
-    ): InputState {
-        return simulatedControlIds.fold(inputState) { state, id ->
-            when (id) {
-                is Id.Key -> state.setDigitalKey(id, simulatedInputState.getDigitalKey(id))
-                is Id.ContinuousDirection -> state.setContinuousDirection(id, simulatedInputState.getContinuousDirection(id))
-                is Id.DiscreteDirection -> state.setDiscreteDirection(id, simulatedInputState.getDiscreteDirection(id))
+    ) {
+        this.simulatedControlIds = simulatedControlIds.toSet()
+        this.simulatedInputState = simulatedInputState
+        publishInputState()
+    }
+
+    /** Cancel touch ownership without disturbing independently simulated controls. */
+    internal fun resetTouchInput() {
+        handlers.values.forEach { handler ->
+            handler.pointerHandler.reset(handler.data)
+            handler.trackedIds = emptySet()
+            handler.inputState = InputState()
+        }
+        publishInputState()
+    }
+
+    /** Release every source before the PadKit composition is disposed. */
+    internal fun reset() {
+        simulatedControlIds = emptySet()
+        simulatedInputState = InputState()
+        resetTouchInput()
+    }
+
+    private fun publishInputState() {
+        val touchState = handlers.values.fold(InputState()) { state, handler -> state.merge(handler.inputState) }
+        val mergedState =
+            simulatedControlIds.fold(touchState) { state, id ->
+                when (id) {
+                    is Id.Key -> state.setDigitalKey(id, simulatedInputState.getDigitalKey(id))
+                    is Id.ContinuousDirection -> state.setContinuousDirection(id, simulatedInputState.getContinuousDirection(id))
+                    is Id.DiscreteDirection -> state.setDiscreteDirection(id, simulatedInputState.getDiscreteDirection(id))
+                }
             }
+        if (currentInputState.value != mergedState) {
+            currentInputState.value = mergedState
+            dispatchState(mergedState)
+        }
+    }
+
+    private fun dispatchState(state: InputState) {
+        // Deliver every transition, including releases during disposal. A state
+        // observer can conflate a quick press/release or stop before disposal.
+        pendingStates.addLast(state)
+        if (dispatching) return
+        dispatching = true
+        try {
+            while (pendingStates.isNotEmpty()) {
+                val next = pendingStates.removeFirst()
+                inputStateListener?.invoke(next)
+            }
+        } finally {
+            pendingStates.clear()
+            dispatching = false
         }
     }
 }

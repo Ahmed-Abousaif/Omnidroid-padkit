@@ -117,7 +117,7 @@ private fun DirectionalButton(
     content: @Composable (State<Boolean>) -> Unit,
 ) {
     val isPressed =
-        remember {
+        remember(directionState, check) {
             derivedStateOf { check(directionState.value.ifUnspecified { Offset.Zero }) }
         }
     content(isPressed)

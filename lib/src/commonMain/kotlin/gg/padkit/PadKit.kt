@@ -20,11 +20,12 @@ package gg.padkit
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
@@ -83,19 +84,34 @@ fun PadKit(
     val rootPosition = remember { mutableStateOf(Offset.Zero) }
 
     val inputEventsGenerator = remember { InputEventsGenerator() }
-    val hapticGenerator = rememberHapticGenerator()
+    val hapticGenerator = if (hapticFeedbackType == HapticFeedbackType.NONE) null else rememberHapticGenerator()
     val inputHapticGenerator =
-        remember(hapticFeedbackType) {
-            InputHapticGenerator(hapticGenerator, hapticFeedbackType, scope.inputState.value)
+        remember(hapticGenerator, hapticFeedbackType) {
+            hapticGenerator?.let { InputHapticGenerator(it, hapticFeedbackType, scope.inputState.value) }
         }
+    val currentStateCallback = rememberUpdatedState(onInputStateUpdated)
+    val currentEventsCallback = rememberUpdatedState(onInputEvents)
+    val currentHapticGenerator = rememberUpdatedState(inputHapticGenerator)
 
-    LaunchedEffect(simulatedState.value) {
-        scope.inputState.value =
-            scope.handleSimulatedInputEvents(
-                simulatedControlIds.value,
-                scope.inputState.value,
-                simulatedState.value,
-            )
+    DisposableEffect(scope) {
+        scope.setInputStateListener { state ->
+            val events = inputEventsGenerator.onInputStateChanged(state)
+            currentStateCallback.value?.invoke(state)
+            currentEventsCallback.value?.invoke(events)
+            currentHapticGenerator.value?.onInputStateChanged(state)
+        }
+        onDispose {
+            scope.reset()
+            scope.setInputStateListener(null)
+        }
+    }
+
+    // Read both in composition so changing just the selected IDs also updates
+    // the override, and the pointer loop never captures old State instances.
+    val controlIds = simulatedControlIds.value
+    val simulatedInput = simulatedState.value
+    SideEffect {
+        scope.updateSimulatedInput(controlIds, simulatedInput)
     }
 
     Box(
@@ -103,36 +119,25 @@ fun PadKit(
             modifier
                 .fillMaxSize()
                 .onGloballyPositioned { rootPosition.value = it.positionInRoot() }
-                .pointerInput(Unit) {
-                    awaitPointerEventScope {
-                        while (true) {
-                            val event = awaitPointerEvent()
-                            val pointers =
-                                event.changes
-                                    .asSequence()
-                                    .filter { it.pressed }
-                                    .map { Pointer(it.id.value, it.position + rootPosition.value) }
+                .pointerInput(scope) {
+                    try {
+                        awaitPointerEventScope {
+                            while (true) {
+                                val event = awaitPointerEvent()
+                                val pointers =
+                                    event.changes
+                                        .asSequence()
+                                        .filter { it.pressed }
+                                        .map { Pointer(it.id.value, it.position + rootPosition.value) }
 
-                            val updatedInputState = scope.handleInputEvent(pointers)
-                            scope.inputState.value =
-                                scope.handleSimulatedInputEvents(
-                                    simulatedControlIds.value,
-                                    updatedInputState,
-                                    simulatedState.value,
-                                )
+                                scope.handleInputEvent(pointers)
+                            }
                         }
+                    } finally {
+                        scope.resetTouchInput()
                     }
                 },
     ) {
         scope.content()
-    }
-
-    LaunchedEffect(scope.inputState, inputHapticGenerator, onInputStateUpdated, onInputEvents) {
-        snapshotFlow { scope.inputState.value }
-            .collect { inputState ->
-                onInputStateUpdated?.invoke(inputState)
-                onInputEvents?.invoke(inputEventsGenerator.onInputStateChanged(inputState))
-                inputHapticGenerator.onInputStateChanged(inputState)
-            }
     }
 }

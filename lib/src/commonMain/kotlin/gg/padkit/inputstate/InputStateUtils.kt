@@ -19,6 +19,14 @@ package gg.padkit.inputstate
 
 import gg.padkit.ids.Id
 
+/** Combine contributions; releasing one handler must not release another's keys. */
+internal fun InputState.merge(other: InputState): InputState =
+    copy(
+        digitalKeys = digitalKeys.addAll(other.digitalKeys),
+        continuousDirections = continuousDirections.putAll(other.continuousDirections),
+        discreteDirections = discreteDirections.putAll(other.discreteDirections),
+    )
+
 // It's possible that multiple buttons set the same key so we don't want to override their behavior.
 internal fun InputState.setDigitalKeyIfPressed(
     digitalId: Id.Key,
