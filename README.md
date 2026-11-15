@@ -94,6 +94,22 @@ Android haptics submit effects directly to the platform vibrator service and own
 
 Engine regression tests live in `lib/src/commonTest/kotlin`. Omnidroid's source wrapper runs these together with Android Compose lifecycle tests under Robolectric.
 
+### Configurable control feedback
+
+Pass `hapticFeedbackSettings = HapticFeedbackSettings(intensity = 0.5f)` to request normalized strength. Zero and `HapticFeedbackType.NONE` are silent and avoid platform adapter initialization. Android checks amplitude control on API 26+, uses adjustable 30 ms press / 15 ms release effects, and retains a duration-only fallback on older devices. This replaces the default predefined Android click/tick effects; hardware without amplitude control uses its default strength. iOS scales its existing strengths; desktop/browser remain silent.
+
+`HapticFeedbackSettings` also selects `DirectionHapticFeedback.CHANGE` or `ACTIVATION`, analog activation feedback, effect coalescing, and excluded typed IDs. Feedback follows logical input, including simulations. Mode/intensity/adapter changes affect subsequent transitions without replaying held inputs. Muted transitions still update the tracker.
+
+Supply `hapticFeedback = HapticFeedback { effect, intensity -> ... }` for custom device routing. `rememberHapticFeedback()` provides the platform adapter to composable callers; Android hosts can use `createAndroidHapticFeedback(context)` for their own actions. Keep preference persistence, action success, and rumble/output coordination in the host.
+
+### Discrete thumbstick output
+
+`ControlDirectionalAnalog(id = Id.DiscreteDirection(1), allowDiagonals = false)` renders a smooth analog-style thumbstick and emits only discrete-direction events. `deadZone` defaults to 0.25 and accepts finite values from 0 to 1. Four-way mode selects the dominant axis, with horizontal ties. Changing either policy while held recomputes output immediately while preserving pointer capture and smooth touch visuals. Simulated discrete input overrides output/visuals; removing it restores held touch. Cancellation, remapping, and disposal release input.
+
+### Staggered layouts
+
+`buildGridAnchors` accepts typed rows of IDs, button size, origin, row/column step vectors, and clockwise rotation in degrees. Vectors need not be perpendicular, so the same helper supports staggered/slanted console layouts without platform IDs or console-specific settings. Ragged rows preserve their row index.
+
 ### License
 
 ```

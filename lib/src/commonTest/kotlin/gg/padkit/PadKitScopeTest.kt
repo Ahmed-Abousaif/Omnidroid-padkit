@@ -3,6 +3,7 @@ package gg.padkit
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import gg.padkit.anchors.Anchor
+import gg.padkit.handlers.AnalogGestureHandler
 import gg.padkit.handlers.AnalogPointerHandler
 import gg.padkit.handlers.ButtonPointerHandler
 import gg.padkit.handlers.CrossPointerHandler
@@ -81,7 +82,7 @@ class PadKitScopeTest {
 
     @Test
     fun capturedStickContinuesOutsideBoundsAndResetsOnCancel() {
-        register(AnalogPointerHandler(stick, null), data = AnalogPointerHandler.Data())
+        register(AnalogPointerHandler(stick, null), data = AnalogGestureHandler.Data())
         touch(Pointer(1, Offset(50f, 50f)))
         touch(Pointer(1, Offset(200f, 50f)))
         assertEquals(Offset(1f, 0f), scope.inputState.value.getContinuousDirection(stick))
@@ -92,7 +93,7 @@ class PadKitScopeTest {
 
     @Test
     fun cancelledStickStartsFreshAndDoesNotCountAsDoubleTap() {
-        register(AnalogPointerHandler(stick, key), data = AnalogPointerHandler.Data())
+        register(AnalogPointerHandler(stick, key), data = AnalogGestureHandler.Data())
         touch(Pointer(1, Offset(50f, 50f)))
         touch(Pointer(1, Offset(70f, 50f)))
         scope.resetTouchInput()

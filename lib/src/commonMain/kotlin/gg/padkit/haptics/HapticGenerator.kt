@@ -19,9 +19,14 @@ package gg.padkit.haptics
 
 import androidx.compose.runtime.Composable
 
-internal interface HapticGenerator {
-    fun generate(type: HapticEffect)
+/** A feedback output adapter. Hosts may supply their own device routing or mixing policy. */
+fun interface HapticFeedback {
+    fun generate(
+        type: HapticEffect,
+        intensity: Float,
+    )
 }
 
+/** Remember the platform feedback adapter, also usable for host-owned actions. */
 @Composable
-internal expect fun rememberHapticGenerator(): HapticGenerator
+expect fun rememberHapticFeedback(): HapticFeedback

@@ -21,18 +21,23 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import platform.UIKit.UIImpactFeedbackGenerator
 
-internal object IosHapticGenerator : HapticGenerator {
+internal object IosHapticGenerator : HapticFeedback {
     private val impactFeedbackGenerator = UIImpactFeedbackGenerator()
 
-    override fun generate(type: HapticEffect) {
+    override fun generate(
+        type: HapticEffect,
+        intensity: Float,
+    ) {
+        if (!intensity.isFinite() || intensity <= 0f) return
+        val strength = intensity.coerceAtMost(1f).toDouble()
         when (type) {
-            HapticEffect.PRESS -> impactFeedbackGenerator.impactOccurredWithIntensity(0.5)
-            HapticEffect.RELEASE -> impactFeedbackGenerator.impactOccurredWithIntensity(0.3)
+            HapticEffect.PRESS -> impactFeedbackGenerator.impactOccurredWithIntensity(0.5 * strength)
+            HapticEffect.RELEASE -> impactFeedbackGenerator.impactOccurredWithIntensity(0.3 * strength)
         }
     }
 }
 
 @Composable
-internal actual fun rememberHapticGenerator(): HapticGenerator {
+actual fun rememberHapticFeedback(): HapticFeedback {
     return remember { IosHapticGenerator }
 }

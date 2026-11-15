@@ -20,11 +20,14 @@ package gg.padkit.haptics
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 
-internal object DummyHapticGenerator : HapticGenerator {
-    override fun generate(type: HapticEffect) { }
+internal object DummyHapticGenerator : HapticFeedback {
+    override fun generate(
+        type: HapticEffect,
+        intensity: Float,
+    ) { }
 }
 
 @Composable
-internal actual fun rememberHapticGenerator(): HapticGenerator {
+actual fun rememberHapticFeedback(): HapticFeedback {
     return remember { DummyHapticGenerator }
 }
