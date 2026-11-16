@@ -107,6 +107,12 @@ class PadKitScope {
             ?.pointerHandler
     }
 
+    internal fun hitsControl(position: Offset): Boolean {
+        val handler = handlers.values.firstOrNull { it.rect.contains(position) } ?: return false
+        // Use the same activation ellipse as handleInputEvent, including empty corners.
+        return position.relativeToCenter(handler.rect).getDistanceSquared() <= 1f
+    }
+
     private fun getHandlerTracking(pointerId: Long): PointerHandler? {
         return handlers.values
             .firstOrNull { it.trackedIds.contains(pointerId) }

@@ -71,6 +71,10 @@ import gg.padkit.inputstate.InputState
  * @param simulatedState The [InputState] to use for the controls specified in [simulatedControlIds].
  * @param hapticFeedbackSettings Feedback strength, transition policy, and excluded control IDs.
  * @param hapticFeedback Optional output adapter. Null selects the platform implementation.
+ * @param onUnhandledPointers Optional host input outside the control hit regions. Reports all
+ * pressed unhandled pointers in root coordinates, and an empty list on release or cancellation.
+ * Pointers starting outside controls stay with the host until released, even when dragged over
+ * controls. Pointers starting on controls never transfer to the host during that gesture.
  * @param content A lambda that receives a [PadKitScope] where you can define the layout of the
  * gamepad by adding control composables.
  */
@@ -84,6 +88,7 @@ fun PadKit(
     simulatedState: State<InputState> = mutableStateOf(InputState()),
     hapticFeedbackSettings: HapticFeedbackSettings = HapticFeedbackSettings(),
     hapticFeedback: HapticFeedback? = null,
+    onUnhandledPointers: ((List<UnhandledPointer>) -> Unit)? = null,
     content: @Composable PadKitScope.() -> Unit,
 ) {
     val scope = remember { PadKitScope() }
@@ -102,6 +107,7 @@ fun PadKit(
     val currentHapticGenerator = rememberUpdatedState(hapticGenerator)
     val currentHapticType = rememberUpdatedState(hapticFeedbackType)
     val currentHapticSettings = rememberUpdatedState(hapticFeedbackSettings)
+    val currentUnhandledCallback = rememberUpdatedState(onUnhandledPointers)
 
     DisposableEffect(scope) {
         scope.setInputStateListener { state ->
@@ -135,21 +141,23 @@ fun PadKit(
                 .fillMaxSize()
                 .onGloballyPositioned { rootPosition.value = it.positionInRoot() }
                 .pointerInput(scope) {
+                    val router = TouchPointerRouter()
                     try {
                         awaitPointerEventScope {
                             while (true) {
                                 val event = awaitPointerEvent()
                                 val pointers =
                                     event.changes
-                                        .asSequence()
                                         .filter { it.pressed }
                                         .map { Pointer(it.id.value, it.position + rootPosition.value) }
-
-                                scope.handleInputEvent(pointers)
+                                val routed = router.route(pointers, currentUnhandledCallback.value != null, scope::hitsControl)
+                                scope.handleInputEvent(routed.controls.asSequence())
+                                currentUnhandledCallback.value?.invoke(routed.unhandled)
                             }
                         }
                     } finally {
                         scope.resetTouchInput()
+                        currentUnhandledCallback.value?.invoke(emptyList())
                     }
                 },
     ) {
