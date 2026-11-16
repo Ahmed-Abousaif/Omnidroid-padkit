@@ -29,7 +29,7 @@ body:
   id: environment
   attributes:
     label: Environment
-    description: Platform, OS/device, Compose/Kotlin versions, and host-app version
+    description: Android version/API level, device model, Compose/Kotlin versions, and Omnidroid version
       if relevant.
   validations:
     required: true

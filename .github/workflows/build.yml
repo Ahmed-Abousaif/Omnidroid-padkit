@@ -1,25 +1,32 @@
-name: Build Multiplatform project
+name: Android library and API 24 regressions
+
 on:
   push:
-    branches:
-      - main
-      - feature/ci_support
+    branches: [main]
   pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
-  build-multiplatform-project:
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-20.04, macos-12, windows-2022]
-        gradle: [8.3]
-    runs-on: ${{ matrix.os }}
+  android:
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-java@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
         with:
-          distribution: 'corretto'
+          distribution: temurin
           java-version: '17'
-      - name: Build Multiplatform project
-        shell: bash
-        run: ./gradlew assemble
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Install compile SDK
+        run: sdkmanager 'platforms;android-37.0' 'build-tools;36.0.0'
+      - name: Verify Android 7 compatibility, release packaging, and style
+        run: |
+          chmod +x gradlew
+          ./gradlew :lib:verifyAndroid7Compatibility :lib:ktlintCheck --no-daemon
+      - name: Build optional Android device demo
+        run: ./gradlew -PincludeSample=true :sample:assembleDebug --no-daemon

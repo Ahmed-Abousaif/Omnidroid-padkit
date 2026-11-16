@@ -1,16 +1,16 @@
 # Contributing to Omnidroid PadKit
 
-Reusable gamepad capture, input state/events, simulation, controls, and haptic behavior.
+Android gamepad capture, input state/events, simulation, controls, and haptic behavior. Android 7.0 / API 24 is the minimum supported version.
 
 ## Issues and discussions
 
 Search existing reports before opening a new one. Use the bug/feature forms and fill in the required reproduction, revision, and environment fields. Questions and design proposals belong in [Discussions](https://github.com/Ahmed-Abousaif/Omnidroid-padkit/discussions). Treat contributors respectfully and provide actionable feedback.
 
-App installation, library UI, or general Omnidroid behavior can be reported in [Omnidroid](https://github.com/Ahmed-Abousaif/Omnidroid/issues). Keep shared-library or native-runtime reports here when the problem is isolated to this project.
+App installation, library UI, or general Omnidroid behavior can be reported in [Omnidroid](https://github.com/Ahmed-Abousaif/Omnidroid/issues). Keep Android control-library reports here when the problem is isolated to this project.
 
 ## Development and validation
 
-Use Omnidroid's source wrapper for integration checks: run :omnidroid-padkit:testDebugUnitTest and :omnidroid-touchinput:testDebugUnitTest from the Omnidroid root. Run ./gradlew :lib:ktlintCheck with the standalone repository's JDK/toolchain. Check touch/cancellation and physical haptics on a device when affected.
+Run `./gradlew :lib:verifyAndroid7Compatibility :lib:ktlintCheck` in this repository. Production sources live in `lib/src/main`, and engine, Compose, and haptic tests live in `lib/src/test`, including Android 7.0 / API 24 cases. From Omnidroid, also run `:omnidroid-padkit:verifyAndroid7Compatibility` and `:omnidroid-touchinput:testDebugUnitTest`. Keep minSdk 24, guard newer Android APIs, and check touch/cancellation and physical haptics on a device when affected.
 
 Read the project's [README](../README.md) and Omnidroid's [contributor setup](https://github.com/Ahmed-Abousaif/Omnidroid#-for-contributors--developers). Preserve the existing license notices, upstream build instructions, and recorded nested dependency revisions. Keep user preferences, product skins, and emulator-specific routing in the frontend unless this repository owns that behavior.
 
