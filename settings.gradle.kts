@@ -1,16 +1,8 @@
-rootProject.name = "PadKit"
-
-include(":sample:androidApp")
-include(":lib")
-include(":sample:desktopApp")
-include(":sample:shared")
-
 pluginManagement {
     repositories {
-        gradlePluginPortal()
         google()
+        gradlePluginPortal()
         mavenCentral()
-        maven("https://maven.pkg.jetbrains.space/public/p/compose/dev")
     }
 }
 
@@ -18,6 +10,13 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        maven("https://maven.pkg.jetbrains.space/public/p/compose/dev")
     }
+}
+
+rootProject.name = "Omnidroid-padkit"
+include(":lib")
+
+// Keep device smoke testing available without configuring an application for every library build.
+if (providers.gradleProperty("includeSample").orNull == "true") {
+    include(":sample")
 }

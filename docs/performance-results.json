@@ -1,0 +1,48 @@
+{
+  "recordedOn": "2026-11-16",
+  "comparison": "Android-only Omnidroid fork after routing/state optimization and cleanup, before versus after face-button and capture optimization",
+  "runtime": "JBR 21 host JVM",
+  "warmupEventsPerScenario": 50000,
+  "sampleBatches": 9,
+  "eventsPerBatch": 20000,
+  "statistic": "Median of allocated bytes per event in each batch, measured on the replay thread",
+  "inputConstruction": "Prebuilt pointer frames; touch-event construction excluded",
+  "scenarios": [
+    {
+      "scenario": "One finger moving within a held face button",
+      "beforeBytesPerEvent": 528,
+      "afterBytesPerEvent": 184,
+      "reductionPercent": 65.2
+    },
+    {
+      "scenario": "Three fingers moving within held face buttons",
+      "beforeBytesPerEvent": 1816,
+      "afterBytesPerEvent": 584,
+      "reductionPercent": 67.8
+    },
+    {
+      "scenario": "Three fingers changing face-button selections",
+      "beforeBytesPerEvent": 1760,
+      "afterBytesPerEvent": 1112,
+      "reductionPercent": 36.8
+    },
+    {
+      "scenario": "Four pointers through 12 controls: face cluster, D-pad, and digital buttons",
+      "beforeBytesPerEvent": 1288,
+      "afterBytesPerEvent": 920,
+      "reductionPercent": 28.6
+    }
+  ],
+  "releaseAarBytes": {
+    "before": 230954,
+    "after": 231844
+  },
+  "limits": [
+    "Rounded byte totals omit approximately 0.0024 bytes/event of allocation-counter overhead.",
+    "Host allocation measurements do not establish Android FPS, touch latency, battery life, GC pauses, or whole-app memory usage.",
+    "Timing comparisons are not used because final measurements overlapped build work.",
+    "The temporary verification probe was outside the Android module; no host benchmark target or dependency is shipped.",
+    "These percentages use a different baseline from the initial routing replay and must not be added to its results.",
+    "These control-handler/PadKitScope replays exclude the separate host-touch router integrated from main."
+  ]
+}

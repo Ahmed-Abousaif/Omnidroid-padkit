@@ -10,6 +10,8 @@ List the exact commands/devices tested and their results. Explain checks you cou
 
 Describe API, dependency, ABI, or artifact changes where relevant. Include screenshots or a recording for visual changes.
 
+Preserve Android 7.0 / API 24 support and guard newer Android APIs.
+
 ## Contributor checklist
 
 - [ ] I read the contributing guide and kept the change focused.
