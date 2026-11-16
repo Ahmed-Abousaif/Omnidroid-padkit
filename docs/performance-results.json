@@ -42,6 +42,7 @@
     "Host allocation measurements do not establish Android FPS, touch latency, battery life, GC pauses, or whole-app memory usage.",
     "Timing comparisons are not used because final measurements overlapped build work.",
     "The temporary verification probe was outside the Android module; no host benchmark target or dependency is shipped.",
-    "These percentages use a different baseline from the initial routing replay and must not be added to its results."
+    "These percentages use a different baseline from the initial routing replay and must not be added to its results.",
+    "These control-handler/PadKitScope replays exclude the separate host-touch router integrated from main."
   ]
 }

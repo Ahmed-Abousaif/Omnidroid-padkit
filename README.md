@@ -24,6 +24,7 @@ Omnidroid PadKit is an **Android-only Jetpack Compose touch-control library** fo
 - Apply changes to simulated control IDs as well as simulated state immediately. Removing an override restores held touch input; disabling tilt releases its simulated contribution. Mutable caller-owned ID selections are copied.
 - Recreate handlers and derived visual state when mappings change, releasing the old mapping and updating the new pressed/direction visuals.
 - Use typed internal gesture data instead of `Any?` casts, while keeping mutation on the Compose/UI thread and published snapshots immutable.
+- Preserve main's optional `onUnhandledPointers` callback: root-coordinate touches beginning outside controls stay with the host until release, while control touches never transfer to the host mid-gesture. This supports simultaneous stylus/fullscreen touch and held controls. With no host callback, sliding into uncaptured digital controls remains supported.
 
 ### Controls, geometry, and Android haptics
 
@@ -82,7 +83,7 @@ The later replay compares the already optimized Android-only fork immediately be
 - Three fingers changing button selections: **1,760 → 1,112** (**36.8% fewer**).
 - Mixed routing through 12 controls with four pointers: **1,288 → 920** (**28.6% fewer**).
 
-Method: JBR 21, 50,000 warmup events, nine batches of 20,000 events, and the median of per-batch allocated bytes/event on the replay thread. Prebuilt touch inputs exclude touch-event construction from these totals. The measurement probe ran outside the module; there is no desktop/HotSpot benchmark target or shipping benchmark dependency. [Recorded allocation evidence](docs/performance-results.json) includes the scenario definitions and measurement limits. Timing comparisons from this later pass are not used because the final measurements overlapped build work.
+Method: JBR 21, 50,000 warmup events, nine batches of 20,000 events, and the median of per-batch allocated bytes/event on the replay thread. These replays isolate the control handlers and `PadKitScope`; prebuilt inputs exclude touch-event construction and the separate host-touch router from these totals. The measurement probe ran outside the module; there is no desktop/HotSpot benchmark target or shipping benchmark dependency. [Recorded allocation evidence](docs/performance-results.json) includes the scenario definitions and measurement limits. Timing comparisons from this later pass are not used because the final measurements overlapped build work.
 
 Reusable buffers and cached immutable state retain a small amount of per-control memory. In this later pass the unshrunk fork release AAR increased from **230,954 to 231,844 bytes** (**+890 bytes / 0.39%**). These are host allocation results, not measurements of Android FPS, touch-to-display latency, battery life, GC pauses, or whole-app memory. No whole-app APK size reduction is claimed.
 
@@ -97,12 +98,12 @@ Install JDK 17 or 21, Android SDK platform `platforms;android-37.0`, and `build-
 
 `verifyAndroid7Compatibility` builds a release AAR, runs release lint including unsupported Android API checks, and executes the library tests. The second command also builds the optional demo and runs full debug lint, including test sources. Windows users can replace `./gradlew` with `.\gradlew.bat`.
 
-Validation after the latest performance pass:
+Validation after integrating the main-branch touchscreen routing:
 
-- **104 library tests**, zero failures/errors/skips, plus **five Omnidroid tilt tests** through the host integration.
-- **22 explicit API 24 cases**. Compose cases also run on API 35; haptic tests cover API 24/25/26/28/35.
+- **114 library tests**, zero failures/errors/skips, plus **five Omnidroid tilt tests** through the host integration.
+- **24 explicit API 24 cases**. Compose cases also run on API 35; haptic tests cover API 24/25/26/28/35.
 - Coverage includes capture, drag-out, cancellation, remapping, disposal, simulation restoration, immutable delivered snapshots, event/feedback order, geometry, and seeded multi-finger models. Face-button tests check 4,000 frames across capture modes and incoming contributions.
-- Debug/demo builds, release AAR packaging, ktlint, Omnidroid app compilation, and Omnidroid release R8 processing pass. All **160 checked public members across 30 entry-point classes** remain intact in the latest performance comparison.
+- Debug/demo builds, release AAR packaging, ktlint, Omnidroid app compilation, and Omnidroid release R8 processing pass. The earlier performance comparison preserved all **160 checked public members across 30 entry-point classes**. The merge also retains main's `UnhandledPointer` and `onUnhandledPointers` API and exercises host-touch routing on API 24 and 35.
 - Lint reports zero errors, with 15 existing library warnings and five demo warnings about dependency/tool versions, catalog style, target SDK, and launcher icons. No new warnings were introduced by the performance pass.
 
 Tests and Android CI run from this repository without an Omnidroid checkout, emulator sources, signing material, or publishing credentials. Omnidroid's shipping release enables R8 and resource shrinking; the library AAR stays unshrunk for consumer optimization. The optional demo's release minification is currently disabled.

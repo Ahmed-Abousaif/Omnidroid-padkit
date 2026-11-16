@@ -156,6 +156,9 @@ class PadKitScope {
         publishInputState()
     }
 
+    // Host routing and control dispatch must use the same complete hit predicate.
+    internal fun hitsControl(position: Offset): Boolean = handlers.values.any { it.hit(position) }
+
     internal fun handleInputEvent(eventPointers: Sequence<Pointer>): InputState {
         for (handler in handlers.values) handler.pointers.clear()
         for (pointer in eventPointers) {
