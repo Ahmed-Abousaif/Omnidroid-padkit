@@ -21,7 +21,10 @@ class TouchPointerRouterTest {
         scope.updateHandlerPosition(handler, Rect(0f, 100f, 100f, 200f))
     }
 
-    private fun route(vararg pointers: Pointer, enabled: Boolean = true): TouchPointerRouter.Result {
+    private fun route(
+        vararg pointers: Pointer,
+        enabled: Boolean = true,
+    ): TouchPointerRouter.Result {
         val result = router.route(pointers.toList(), enabled, scope::hitsControl)
         scope.handleInputEvent(result.controls.asSequence())
         return result

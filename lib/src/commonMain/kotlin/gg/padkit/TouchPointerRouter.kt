@@ -19,15 +19,17 @@ internal class TouchPointerRouter {
         val newIds = pressedIds - previousIds
         unhandledIds = unhandledIds.intersect(pressedIds)
         if (acceptUnhandled) {
-            unhandledIds += pointers
-                .filter { it.pointerId in newIds && !hitsControl(it.position) }
-                .map { it.pointerId }
+            unhandledIds +=
+                pointers
+                    .filter { it.pointerId in newIds && !hitsControl(it.position) }
+                    .map { it.pointerId }
         }
         previousIds = pressedIds
         return Result(
             controls = pointers.filter { it.pointerId !in unhandledIds },
-            unhandled = pointers.filter { it.pointerId in unhandledIds }
-                .map { UnhandledPointer(it.pointerId, it.position, isNew = it.pointerId in newIds) },
+            unhandled =
+                pointers.filter { it.pointerId in unhandledIds }
+                    .map { UnhandledPointer(it.pointerId, it.position, isNew = it.pointerId in newIds) },
         )
     }
 }
